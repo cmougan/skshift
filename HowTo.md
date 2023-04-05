@@ -18,4 +18,4 @@ Steps
 Following this tutorial https://docs.readthedocs.io/en/stable/tutorial/
 Sign with Github
 To build locally
-   sphinx-build -a docs/source/ docs/
+   sphinx-build -a docs/source/ docs/build
