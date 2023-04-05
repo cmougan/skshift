@@ -1,2 +1,3 @@
 skshift==0.1.2
 scikit-learn==0.24.0
+shap==0.39.0
