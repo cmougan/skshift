@@ -14,7 +14,7 @@ Importing libraries
     from sklearn.datasets import make_blobs
     from xgboost import XGBRegressor
     from sklearn.linear_model import LogisticRegression
-    from nobias import ExplanationShiftDetector
+    from skshift import ExplanationShiftDetector
 
 
 Generate synthetic ID and OOD data.
