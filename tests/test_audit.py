@@ -1,4 +1,4 @@
-from nobias import ExplanationAudit
+from skshift import ExplanationAudit
 
 from sklearn.ensemble import GradientBoostingClassifier, GradientBoostingRegressor
 from sklearn.linear_model import LogisticRegression, LinearRegression

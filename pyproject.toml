@@ -3,7 +3,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 [project]
 name = "skshift"
-version = "0.01.01"
+version = "0.01.02"
 authors = [
   { name="Carlos Mougan", email="carmougan@gmail.com" },
 ]
@@ -18,5 +18,5 @@ classifiers = [
 ]
 
 [project.urls]
-"Homepage" = "https://github.com/nobias-project/nobias"
-"Bug Tracker" = "https://github.com/nobias-project/nobiasissues"
+"Homepage" = "https://github.com/cmougan/skshift"
+"Bug Tracker" = "https://github.com/cmougan/skshift/issues"

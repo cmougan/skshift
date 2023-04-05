@@ -1,4 +1,4 @@
-from nobias import ExplanationShiftDetector
+from skshift import ExplanationShiftDetector
 
 
 from xgboost import XGBClassifier, XGBRegressor

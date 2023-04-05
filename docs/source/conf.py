@@ -5,7 +5,7 @@
 import sphinx_rtd_theme
 import skshift
 
-project = "NoBias"
+project = "skshift"
 copyright = "2022, Mougan"
 author = "Carlos Mougan"
 
