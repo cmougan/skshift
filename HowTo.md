@@ -13,3 +13,7 @@ Steps
 3. deploy with
    1. python3 -m twine upload --skip-existing --repository pypi dist/*
 ``
+
+## Webpage
+Following this tutorial https://docs.readthedocs.io/en/stable/tutorial/
+Sign with Github

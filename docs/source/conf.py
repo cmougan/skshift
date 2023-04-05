@@ -3,9 +3,9 @@
 # -- Project information
 
 import sphinx_rtd_theme
-import nobias
+import skshift
 
-project = "NoBias"
+project = "skshift"
 copyright = "2022, Mougan"
 author = "Carlos Mougan"
 
