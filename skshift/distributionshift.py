@@ -13,10 +13,9 @@ class ExplanationShiftDetector(BaseEstimator, ClassifierMixin):
 
     Example
     -------
-    >>> import pandas as pd
     >>> from sklearn.model_selection import train_test_split
     >>> from sklearn.datasets import make_blobs
-    >>> from tools.xaiUtils import ExplanationShiftDetector
+    >>> from skshift import ExplanationShiftDetector
     >>> from xgboost import XGBRegressor
     >>> from sklearn.linear_model import LogisticRegression
 
@@ -37,9 +36,9 @@ class ExplanationShiftDetector(BaseEstimator, ClassifierMixin):
         self,
         model,
         gmodel,
-        space: str = "explanation",
         algorithm: str = "auto",
         masker: bool = False,
+        data_masker: pd.DataFrame = None,
     ):
         """
         Parameters
@@ -71,17 +70,9 @@ class ExplanationShiftDetector(BaseEstimator, ClassifierMixin):
         self.model = model
         self.gmodel = gmodel
         self.explainer = None
-        self.space = space
         self.algorithm = algorithm
         self.masker = masker
-
-        # Check if space is supported
-        if self.space not in ["explanation", "input", "prediction"]:
-            raise ValueError(
-                "space not supported. Supported spaces are: {} got {}".format(
-                    ["explanation", "input", "prediction"], self.space
-                )
-            )
+        self.data_masker = data_masker
 
     def get_gmodel_type(self):
         """
@@ -97,6 +88,27 @@ class ExplanationShiftDetector(BaseEstimator, ClassifierMixin):
             return self.model.steps[-1][1].__class__.__name__
         else:
             return self.model.__class__.__name__
+
+    def fit_detector(self, X, X_ood):
+        try:
+            check_is_fitted(self.model)
+        except:
+            raise ValueError(
+                "Model is not fitted yet, to use this method the model must be fitted."
+            )
+
+        # Get explanations
+        S_val = self.get_explanations(X)
+        S_ood = self.get_explanations(X_ood)
+
+        # Create dataset for  explanation shift detector
+        S_val["label"] = False
+        S_ood["label"] = True
+
+        S = pd.concat([S_val, S_ood])
+        self.S = S
+
+        self.fit_explanation_shift(S.drop(columns="label"), S["label"])
 
     def fit(self, X_source, y_source, X_ood):
         """
@@ -155,56 +167,34 @@ class ExplanationShiftDetector(BaseEstimator, ClassifierMixin):
         self.model.fit(X, y)
 
     def fit_explanation_shift(self, X, y):
+        """
+        Fits the explanation shift detector to the data.
+        """
         self.gmodel.fit(X, y)
 
-    def get_explanations(self, X, data_masker=None):
-        if data_masker == None:
-            data_masker = self.X_tr
+    def get_explanations(self, X):
+        """
+        Returns the explanations of the model on the data X.
+        Produces a dataframe with the explanations of the model on the data X.
+        """
+        if self.masker:
+            self.explainer = shap.Explainer(
+                self.model, algorithm=self.algorithm, masker=self.data_masker
+            )
         else:
-            data_masker = data_masker
+            self.explainer = shap.Explainer(self.model, algorithm=self.algorithm)
 
-        if self.space == "explanation":
-            if self.masker:
-                self.explainer = shap.Explainer(
-                    self.model, algorithm=self.algorithm, masker=data_masker
-                )
-            else:
-                self.explainer = shap.Explainer(self.model, algorithm=self.algorithm)
+        shap_values = self.explainer(X)
+        # Name columns
+        if isinstance(X, pd.DataFrame):
+            columns_name = X.columns
+        else:
+            columns_name = ["Shap%d" % (i + 1) for i in range(X.shape[1])]
 
-            shap_values = self.explainer(X)
-            # Name columns
-            if isinstance(X, pd.DataFrame):
-                columns_name = X.columns
-            else:
-                columns_name = ["Shap%d" % (i + 1) for i in range(X.shape[1])]
-
-            exp = pd.DataFrame(
-                data=shap_values.values,
-                columns=columns_name,
-            )
-        if self.space == "input":
-            shap_values = X
-            # Name columns
-            if isinstance(X, pd.DataFrame):
-                exp = X
-            else:
-                columns_name = ["Shap%d" % (i + 1) for i in range(X.shape[1])]
-
-                exp = pd.DataFrame(
-                    data=shap_values,
-                    columns=columns_name,
-                )
-        if self.space == "prediction":
-            try:
-                shap_values = self.model.predict_proba(X)[:, 1]
-            except:
-                shap_values = self.model.predict(X)
-
-            # Name columns
-            exp = pd.DataFrame(
-                data=shap_values,
-                columns=["preds"],
-            )
+        exp = pd.DataFrame(
+            data=shap_values.values,
+            columns=columns_name,
+        )
 
         return exp
 
@@ -258,8 +248,6 @@ class ExplanationShiftDetector(BaseEstimator, ClassifierMixin):
             )
 
     def explain_detector(self):
-        if self.space == "prediction":
-            return
         exp = shap.Explainer(self.model)
 
         shap_values = exp.shap_values(self.S_ood.drop(columns="label"))
