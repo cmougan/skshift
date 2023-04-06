@@ -39,6 +39,27 @@ def test_fit_detector():
         == 0.742
     )
 
+def test_ID_data():
+    """
+    If the X_new is ID then AUC should be 0.5 
+    """
+    model = XGBClassifier().fit(X_tr, y_tr)
+
+    detector = ExplanationShiftDetector(
+        model=model,
+        gmodel=LogisticRegression(),
+    )
+
+    detector.fit_detector(X_te, X_hold)
+
+    y_eval1 = np.zeros_like(y_te)
+    y_eval2 = np.ones_like(y_hold)
+    y_eval = np.concatenate([y_eval1, y_eval2])
+    X_eval = np.concatenate([X_te, X_hold])
+    assert (
+        np.round_(roc_auc_score(y_eval, detector.predict_proba(X_eval)[:, 1]), decimals=1)
+        == 0.5
+    )
 
 def test_fit_detector_logreg():
     model = LogisticRegression().fit(X_tr, y_tr)
