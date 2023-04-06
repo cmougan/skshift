@@ -35,5 +35,4 @@ print(roc_auc_score(y_new, detector.predict_proba(X_new)[:, 1]))
 # Option 2: fit the whole detector at once
 detector.fit_pipeline(X_tr, y_tr, X_te, X_ood)
 
-roc_auc_score(np.zeros_like(y_te), detector.predict(X_te))
-roc_auc_score(np.zeros_like(y_ood_te.shape[0]), detector.predict(X_ood_te))
+print(roc_auc_score(y_new, detector.predict_proba(X_new)[:, 1]))
