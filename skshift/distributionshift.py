@@ -1,7 +1,5 @@
 from sklearn.base import BaseEstimator, ClassifierMixin
-from sklearn.utils.validation import check_X_y, check_array, check_is_fitted
-from sklearn.model_selection import train_test_split
-from sklearn.metrics import roc_auc_score
+from sklearn.utils.validation import check_X_y, check_is_fitted
 import pandas as pd
 import shap
 
@@ -68,26 +66,11 @@ class ExplanationShiftDetector(BaseEstimator, ClassifierMixin):
         """
 
         self.model = model
-        self.gmodel = gmodel
+        self.detector = gmodel
         self.explainer = None
         self.algorithm = algorithm
         self.masker = masker
         self.data_masker = data_masker
-
-    def get_gmodel_type(self):
-        """
-        Returns the type of the gmodel
-        """
-        if self.gmodel.__class__.__name__ == "Pipeline":
-            return self.gmodel.steps[-1][1].__class__.__name__
-        else:
-            return self.gmodel.__class__.__name__
-
-    def get_model_type(self):
-        if self.model.__class__.__name__ == "Pipeline":
-            return self.model.steps[-1][1].__class__.__name__
-        else:
-            return self.model.__class__.__name__
 
     def fit_detector(self, X, X_ood):
         try:
@@ -115,7 +98,7 @@ class ExplanationShiftDetector(BaseEstimator, ClassifierMixin):
         1. Fits the model F to X and y
         2. Call fit_detector to fit the explanation shift detector
         """
-
+        check_X_y(X, y)
         self.model.fit(X, y)
         self.fit_detector(X_te, X_ood)
 
@@ -126,25 +109,23 @@ class ExplanationShiftDetector(BaseEstimator, ClassifierMixin):
         self.fit_pipeline(X_source, y_source, X_source, X_ood)
 
     def predict(self, X):
-        return self.gmodel.predict(self.get_explanations(X))
+        """
+        Returns the predictions (ID,OOD) of the detector on the data X.
+        """
+        return self.detector.predict(self.get_explanations(X))
 
     def predict_proba(self, X):
-        return self.gmodel.predict_proba(self.get_explanations(X))
-
-    def explanation_predict(self, X):
-        return self.gmodel.predict(X)
-
-    def explanation_predict_proba(self, X):
-        return self.gmodel.predict_proba(X)
-
-    def fit_model(self, X, y):
-        self.model.fit(X, y)
+        """
+        Returns the soft predictions (ID,OOD) of the detector on the data X.
+        """
+        return self.detector.predict_proba(self.get_explanations(X))
 
     def fit_explanation_shift(self, X, y):
         """
         Fits the explanation shift detector to the data.
         """
-        self.gmodel.fit(X, y)
+        check_X_y(X, y)
+        self.detector.fit(X, y)
 
     def get_explanations(self, X):
         """
@@ -171,60 +152,3 @@ class ExplanationShiftDetector(BaseEstimator, ClassifierMixin):
         )
 
         return exp
-
-    def get_auc_val(self):
-        """
-        Returns the AUC of the explanation shift detector on the validation set of the explanation space
-        Example
-        -------
-        from sklearn.model_selection import train_test_split
-        from sklearn.datasets import make_blobs
-        from tools.xaiUtils import ExplanationShiftDetector
-        from xgboost import XGBRegressor
-        from sklearn.linear_model import LogisticRegression
-
-        # Create data
-        X, y = make_blobs(n_samples=2000, centers=2, n_features=5, random_state=0)
-        X_tr, X_te, y_tr, y_te = train_test_split(X, y, test_size=0.5, random_state=0)
-        X_ood,y_ood = make_blobs(n_samples=1000, centers=1, n_features=5, random_state=0)
-
-        detector = ExplanationShiftDetector(model=XGBRegressor(),gmodel=LogisticRegression())
-        detector.fit(X_tr, y_tr, X_ood)
-        detector.get_auc_val()
-        # 0.76
-
-        """
-        return roc_auc_score(
-            self.y_shap_te, self.explanation_predict_proba(self.X_shap_te)[:, 1]
-        )
-
-    def get_coefs(self):
-        if self.gmodel.__class__.__name__ == "Pipeline":
-            if "sklearn.linear_model" in self.gmodel.steps[-1][1].__module__:
-                return self.gmodel.steps[-1][1].coef_
-            else:
-                raise ValueError(
-                    "Coefficients can not be calculated. Supported models are linear: sklearn.linear_model, got {}".format(
-                        self.gmodel.steps[-1][1].__module__
-                    )
-                )
-        else:
-            return self.get_linear_coefs()
-
-    def get_linear_coefs(self):
-        if "sklearn.linear_model" in self.gmodel.__module__:
-            return self.gmodel.coef_
-        else:
-            raise ValueError(
-                "Coefficients can not be calculated. Supported models are linear: sklearn.linear_model, got {}".format(
-                    self.gmodel.steps[-1][1].__module__
-                )
-            )
-
-    def explain_detector(self):
-        exp = shap.Explainer(self.model)
-
-        shap_values = exp.shap_values(self.S_ood.drop(columns="label"))
-        shap.summary_plot(
-            shap_values, self.S_ood.drop(columns="label"), plot_type="bar", show=False
-        )
