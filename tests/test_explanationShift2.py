@@ -26,6 +26,9 @@ y_new = np.concatenate([y_te, y_ood_te])
 
 
 def test_fit_detector():
+    """
+    Test the fit_detector method
+    """
     model = XGBClassifier().fit(X_tr, y_tr)
 
     detector = ExplanationShiftDetector(
@@ -39,9 +42,10 @@ def test_fit_detector():
         == 0.742
     )
 
+
 def test_ID_data():
     """
-    If the X_new is ID then AUC should be 0.5 
+    If the X_new is ID then AUC should be 0.5
     """
     model = XGBClassifier().fit(X_tr, y_tr)
 
@@ -57,11 +61,17 @@ def test_ID_data():
     y_eval = np.concatenate([y_eval1, y_eval2])
     X_eval = np.concatenate([X_te, X_hold])
     assert (
-        np.round_(roc_auc_score(y_eval, detector.predict_proba(X_eval)[:, 1]), decimals=1)
+        np.round_(
+            roc_auc_score(y_eval, detector.predict_proba(X_eval)[:, 1]), decimals=1
+        )
         == 0.5
     )
 
+
 def test_fit_detector_logreg():
+    """
+    Test the fit_detector method with a Log Reg and masked data
+    """
     model = LogisticRegression().fit(X_tr, y_tr)
 
     detector = ExplanationShiftDetector(
@@ -73,6 +83,9 @@ def test_fit_detector_logreg():
 
 
 def test_get_explanation_masker():
+    """
+    Test the get_explanation method with a Linear Regression and masked data
+    """
     model = LinearRegression().fit(X_tr, y_tr)
 
     detector = ExplanationShiftDetector(
@@ -82,7 +95,11 @@ def test_get_explanation_masker():
     detector.fit_detector(X_te, X_ood)
     assert roc_auc_score(y_new, detector.predict(X_new)) == 0.907
 
+
 def test_model_not_fit_error():
+    """
+    Test the fit_detector method raises an error if the model is not fit
+    """
     model = XGBClassifier()
     detector = ExplanationShiftDetector(
         model=model,
@@ -90,4 +107,3 @@ def test_model_not_fit_error():
     )
     with pytest.raises(Exception) as e_info:
         detector.fit_detector(X_te, X_ood)
-
