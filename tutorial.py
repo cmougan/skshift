@@ -36,3 +36,44 @@ print(roc_auc_score(y_new, detector.predict_proba(X_new)[:, 1]))
 detector.fit_pipeline(X_tr, y_tr, X_te, X_ood)
 
 print(roc_auc_score(y_new, detector.predict_proba(X_new)[:, 1]))
+
+# %%
+# Explaining the change of the model
+import shap
+
+explainer = shap.Explainer(detector.detector, masker=detector.get_explanations(X_te))
+shap_values = explainer(detector.get_explanations(X_ood_te))
+# visualize the first prediction's explanation
+shap.waterfall_plot(shap_values[0])
+
+# %%
+# Real World Example
+from sklearn import datasets
+
+# import some data to play with
+dataset = datasets.load_breast_cancer()
+X = dataset.data[:, :5]
+y = dataset.target
+X_tr, X_te, y_tr, y_te = train_test_split(X, y, test_size=0.5, random_state=0)
+
+X_ood = X.copy()
+X_ood[:, 0] = X_ood[:, 0] + 3
+# Split in train and test
+X_ood_tr, X_ood_te, y_ood_tr, y_ood_te = train_test_split(
+    X_ood, y, test_size=0.5, random_state=0
+)
+
+detector = ExplanationShiftDetector(model=XGBClassifier(), gmodel=XGBClassifier())
+
+detector.fit_pipeline(X_tr, y_tr, X_te, X_ood_tr)
+# %%
+explainer = shap.Explainer(detector.detector, masker=detector.get_explanations(X))
+
+shap_values = explainer(detector.get_explanations(X_ood_te))
+# Local Explanations
+shap.waterfall_plot(shap_values[0])
+
+# %%
+# Global Explanations
+shap.plots.bar(shap_values)
+# %%
