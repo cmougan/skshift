@@ -110,46 +110,20 @@ class ExplanationShiftDetector(BaseEstimator, ClassifierMixin):
 
         self.fit_explanation_shift(S.drop(columns="label"), S["label"])
 
+    def fit_pipeline(self, X, y, X_te, X_ood):
+        """
+        1. Fits the model F to X and y
+        2. Call fit_detector to fit the explanation shift detector
+        """
+
+        self.model.fit(X, y)
+        self.fit_detector(X_te, X_ood)
+
     def fit(self, X_source, y_source, X_ood):
         """
-        1. Fits the model F to the data by splitting the data into two equal parts.
-        2. Get the explanations of the model F on the validation set and OOD
-        3. Fit the inspector to the data to the data.
-
+        Automatically fits the whole pipeline
         """
-
-        # Check that X and y have correct shape
-        check_X_y(X_source, y_source)
-        self.X_ood = X_ood
-
-        self.X_tr, self.X_val, self.y_tr, self.y_val = train_test_split(
-            X_source, y_source, random_state=0, test_size=0.5
-        )
-
-        # Fit model F
-        self.fit_model(self.X_tr, self.y_tr)
-
-        # Get explanations
-        self.S_val = self.get_explanations(self.X_val)
-        self.S_ood = self.get_explanations(self.X_ood)
-
-        # Create dataset for  explanation shift detector
-        self.S_val["label"] = False
-        self.S_ood["label"] = True
-
-        self.S = pd.concat([self.S_val, self.S_ood])
-
-        (
-            self.X_shap_tr,
-            self.X_shap_te,
-            self.y_shap_tr,
-            self.y_shap_te,
-        ) = train_test_split(
-            self.S.drop(columns="label"), self.S["label"], random_state=0, test_size=0.5
-        )
-        self.fit_explanation_shift(self.X_shap_tr, self.y_shap_tr)
-
-        return self
+        self.fit_pipeline(X_source, y_source, X_source, X_ood)
 
     def predict(self, X):
         return self.gmodel.predict(self.get_explanations(X))

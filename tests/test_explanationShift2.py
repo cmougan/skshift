@@ -105,5 +105,20 @@ def test_model_not_fit_error():
         model=model,
         gmodel=LogisticRegression(),
     )
-    with pytest.raises(Exception) as e_info:
+    with pytest.raises(Exception):
         detector.fit_detector(X_te, X_ood)
+
+
+def fit_pipeline():
+    """
+    Test that we can fit the full pipeline with the fit_pipeline and fit methods
+    """
+    detector = ExplanationShiftDetector(
+        model=XGBClassifier(),
+        gmodel=LogisticRegression(),
+    )
+    detector.fit_pipeline(X_tr, y_tr, X_te, X_ood)
+    assert roc_auc_score(y_new, detector.predict_proba(X_new)[:, 1]) == 0.742
+    # Check that it fits the same as the fit method
+    detector.fit(X_tr, y_tr, X_te, X_ood)
+    assert roc_auc_score(y_new, detector.predict_proba(X_new)[:, 1]) == 0.742
