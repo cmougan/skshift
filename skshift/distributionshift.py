@@ -42,11 +42,10 @@ class ExplanationShiftDetector(BaseEstimator, ClassifierMixin):
         Parameters
         ----------
         model : sklearn model
-            Model to be used to compute the shap values.
+            Model to be used to compute the shap values. If its already call .fit_detector(), if its not, call .fit_pipeline() or .fit()
+
         gmodel : sklearn model
             Model to be used to distinguish between the two datasets.
-        space : str, optional
-            Space in which the gmodel is learned. Can be 'explanation' or 'input' or 'predictions'. Default is 'explanation'.
 
         algorithm : "auto", "permutation", "partition", "tree", or "linear"
                 The algorithm used to estimate the Shapley values. There are many different algorithms that
@@ -63,6 +62,10 @@ class ExplanationShiftDetector(BaseEstimator, ClassifierMixin):
                 are estimated. Is a boolean that indicates if the masker should be used or not. If True, the masker is used.
                 If False, the masker is not used. The background distribution is the same distribution as we are calculating the Shapley values.
                 TODO Decide which masker distribution is better to use, options are: train data, hold out data, ood data
+
+        data_masker : pd.DataFrame
+                The masker object is used to define the background distribution over which the Shapley values
+                are estimated
         """
 
         self.model = model
@@ -73,6 +76,17 @@ class ExplanationShiftDetector(BaseEstimator, ClassifierMixin):
         self.data_masker = data_masker
 
     def fit_detector(self, X, X_ood):
+        """
+        Fits the explanation shift detector to the data X and X_ood.
+        The model should have already been fitted
+
+        Parameters
+        ----------
+        X : array-like of shape (n_samples, n_features)
+            The training input samples.
+        X_ood : array-like of shape (n_samples, n_features)
+            The out of distribution input samples.
+        """
         try:
             check_is_fitted(self.model)
         except:
@@ -97,16 +111,40 @@ class ExplanationShiftDetector(BaseEstimator, ClassifierMixin):
         """
         1. Fits the model F to X and y
         2. Call fit_detector to fit the explanation shift detector
+
+
+        Parameters
+        ----------
+        X : array-like of shape (n_samples, n_features)
+            The training input samples.
+        y : array-like of shape (n_samples,)
+            The target values (class labels in classification, real numbers in regression).
+        X_te : array-like of shape (n_samples, n_features)
+            The test input samples.
+        X_ood : array-like of shape (n_samples, n_features)
+            The out of distribution input samples.
         """
         check_X_y(X, y)
         self.model.fit(X, y)
         self.fit_detector(X_te, X_ood)
 
-    def fit(self, X_source, y_source, X_ood):
+    def fit(self, X, y, X_te, X_ood):
         """
         Automatically fits the whole pipeline
+
+        Parameters
+        ----------
+        X : array-like of shape (n_samples, n_features)
+            The training input samples.
+        y : array-like of shape (n_samples,)
+            The target values (class labels in classification, real numbers in regression).
+        X_te : array-like of shape (n_samples, n_features)
+            The test input samples.
+        X_ood : array-like of shape (n_samples, n_features)
+            The out of distribution input samples.
+
         """
-        self.fit_pipeline(X_source, y_source, X_source, X_ood)
+        self.fit_pipeline(X, y, X_te, X_ood)
 
     def predict(self, X):
         """
