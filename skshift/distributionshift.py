@@ -78,7 +78,7 @@ class ExplanationShiftDetector(BaseEstimator, ClassifierMixin):
     def fit_detector(self, X, X_ood):
         """
         Fits the explanation shift detector to the data X and X_ood.
-        The model should have already been fitted
+        The model F should have already been fitted.
 
         Parameters
         ----------
