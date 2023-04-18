@@ -1,7 +1,5 @@
 from sklearn.base import BaseEstimator, ClassifierMixin
-from sklearn.utils.validation import check_X_y, check_array, check_is_fitted
-from sklearn.model_selection import train_test_split
-from sklearn.metrics import roc_auc_score
+from sklearn.utils.validation import check_X_y, check_is_fitted
 import pandas as pd
 import shap
 
@@ -13,10 +11,9 @@ class ExplanationShiftDetector(BaseEstimator, ClassifierMixin):
 
     Example
     -------
-    >>> import pandas as pd
     >>> from sklearn.model_selection import train_test_split
     >>> from sklearn.datasets import make_blobs
-    >>> from tools.xaiUtils import ExplanationShiftDetector
+    >>> from skshift import ExplanationShiftDetector
     >>> from xgboost import XGBRegressor
     >>> from sklearn.linear_model import LogisticRegression
 
@@ -37,19 +34,18 @@ class ExplanationShiftDetector(BaseEstimator, ClassifierMixin):
         self,
         model,
         gmodel,
-        space: str = "explanation",
         algorithm: str = "auto",
         masker: bool = False,
+        data_masker: pd.DataFrame = None,
     ):
         """
         Parameters
         ----------
         model : sklearn model
-            Model to be used to compute the shap values.
+            Model to be used to compute the shap values. If its already call .fit_detector(), if its not, call .fit_pipeline() or .fit()
+
         gmodel : sklearn model
             Model to be used to distinguish between the two datasets.
-        space : str, optional
-            Space in which the gmodel is learned. Can be 'explanation' or 'input' or 'predictions'. Default is 'explanation'.
 
         algorithm : "auto", "permutation", "partition", "tree", or "linear"
                 The algorithm used to estimate the Shapley values. There are many different algorithms that
@@ -66,203 +62,131 @@ class ExplanationShiftDetector(BaseEstimator, ClassifierMixin):
                 are estimated. Is a boolean that indicates if the masker should be used or not. If True, the masker is used.
                 If False, the masker is not used. The background distribution is the same distribution as we are calculating the Shapley values.
                 TODO Decide which masker distribution is better to use, options are: train data, hold out data, ood data
+
+        data_masker : pd.DataFrame
+                The masker object is used to define the background distribution over which the Shapley values
+                are estimated
         """
 
         self.model = model
-        self.gmodel = gmodel
+        self.detector = gmodel
         self.explainer = None
-        self.space = space
         self.algorithm = algorithm
         self.masker = masker
+        self.data_masker = data_masker
 
-        # Check if space is supported
-        if self.space not in ["explanation", "input", "prediction"]:
+    def fit_detector(self, X, X_ood):
+        """
+        Fits the explanation shift detector to the data X and X_ood.
+        The model F should have already been fitted.
+
+        Parameters
+        ----------
+        X : array-like of shape (n_samples, n_features)
+            The training input samples.
+        X_ood : array-like of shape (n_samples, n_features)
+            The out of distribution input samples.
+        """
+        try:
+            check_is_fitted(self.model)
+        except:
             raise ValueError(
-                "space not supported. Supported spaces are: {} got {}".format(
-                    ["explanation", "input", "prediction"], self.space
-                )
+                "Model is not fitted yet, to use this method the model must be fitted."
             )
-
-    def get_gmodel_type(self):
-        """
-        Returns the type of the gmodel
-        """
-        if self.gmodel.__class__.__name__ == "Pipeline":
-            return self.gmodel.steps[-1][1].__class__.__name__
-        else:
-            return self.gmodel.__class__.__name__
-
-    def get_model_type(self):
-        if self.model.__class__.__name__ == "Pipeline":
-            return self.model.steps[-1][1].__class__.__name__
-        else:
-            return self.model.__class__.__name__
-
-    def fit(self, X_source, y_source, X_ood):
-        """
-        1. Fits the model F to the data by splitting the data into two equal parts.
-        2. Get the explanations of the model F on the validation set and OOD
-        3. Fit the inspector to the data to the data.
-
-        """
-
-        # Check that X and y have correct shape
-        check_X_y(X_source, y_source)
-        self.X_ood = X_ood
-
-        self.X_tr, self.X_val, self.y_tr, self.y_val = train_test_split(
-            X_source, y_source, random_state=0, test_size=0.5
-        )
-
-        # Fit model F
-        self.fit_model(self.X_tr, self.y_tr)
 
         # Get explanations
-        self.S_val = self.get_explanations(self.X_val)
-        self.S_ood = self.get_explanations(self.X_ood)
+        S_val = self.get_explanations(X)
+        S_ood = self.get_explanations(X_ood)
 
         # Create dataset for  explanation shift detector
-        self.S_val["label"] = False
-        self.S_ood["label"] = True
+        S_val["label"] = False
+        S_ood["label"] = True
 
-        self.S = pd.concat([self.S_val, self.S_ood])
+        S = pd.concat([S_val, S_ood])
+        self.S = S
 
-        (
-            self.X_shap_tr,
-            self.X_shap_te,
-            self.y_shap_tr,
-            self.y_shap_te,
-        ) = train_test_split(
-            self.S.drop(columns="label"), self.S["label"], random_state=0, test_size=0.5
-        )
-        self.fit_explanation_shift(self.X_shap_tr, self.y_shap_tr)
+        self.fit_explanation_shift(S.drop(columns="label"), S["label"])
 
-        return self
+    def fit_pipeline(self, X, y, X_te, X_ood):
+        """
+        1. Fits the model F to X and y
+        2. Call fit_detector to fit the explanation shift detector
+
+
+        Parameters
+        ----------
+        X : array-like of shape (n_samples, n_features)
+            The training input samples.
+        y : array-like of shape (n_samples,)
+            The target values (class labels in classification, real numbers in regression).
+        X_te : array-like of shape (n_samples, n_features)
+            The test input samples.
+        X_ood : array-like of shape (n_samples, n_features)
+            The out of distribution input samples.
+        """
+        check_X_y(X, y)
+        self.model.fit(X, y)
+        self.fit_detector(X_te, X_ood)
+
+    def fit(self, X, y, X_te, X_ood):
+        """
+        Automatically fits the whole pipeline
+
+        Parameters
+        ----------
+        X : array-like of shape (n_samples, n_features)
+            The training input samples.
+        y : array-like of shape (n_samples,)
+            The target values (class labels in classification, real numbers in regression).
+        X_te : array-like of shape (n_samples, n_features)
+            The test input samples.
+        X_ood : array-like of shape (n_samples, n_features)
+            The out of distribution input samples.
+
+        """
+        self.fit_pipeline(X, y, X_te, X_ood)
 
     def predict(self, X):
-        return self.gmodel.predict(self.get_explanations(X))
+        """
+        Returns the predictions (ID,OOD) of the detector on the data X.
+        """
+        return self.detector.predict(self.get_explanations(X))
 
     def predict_proba(self, X):
-        return self.gmodel.predict_proba(self.get_explanations(X))
-
-    def explanation_predict(self, X):
-        return self.gmodel.predict(X)
-
-    def explanation_predict_proba(self, X):
-        return self.gmodel.predict_proba(X)
-
-    def fit_model(self, X, y):
-        self.model.fit(X, y)
+        """
+        Returns the soft predictions (ID,OOD) of the detector on the data X.
+        """
+        return self.detector.predict_proba(self.get_explanations(X))
 
     def fit_explanation_shift(self, X, y):
-        self.gmodel.fit(X, y)
+        """
+        Fits the explanation shift detector to the data.
+        """
+        check_X_y(X, y)
+        self.detector.fit(X, y)
 
-    def get_explanations(self, X, data_masker=None):
-        if data_masker == None:
-            data_masker = self.X_tr
+    def get_explanations(self, X):
+        """
+        Returns the explanations of the model on the data X.
+        Produces a dataframe with the explanations of the model on the data X.
+        """
+        if self.masker:
+            self.explainer = shap.Explainer(
+                self.model, algorithm=self.algorithm, masker=self.data_masker
+            )
         else:
-            data_masker = data_masker
+            self.explainer = shap.Explainer(self.model, algorithm=self.algorithm)
 
-        if self.space == "explanation":
-            if self.masker:
-                self.explainer = shap.Explainer(
-                    self.model, algorithm=self.algorithm, masker=data_masker
-                )
-            else:
-                self.explainer = shap.Explainer(self.model, algorithm=self.algorithm)
+        shap_values = self.explainer(X)
+        # Name columns
+        if isinstance(X, pd.DataFrame):
+            columns_name = X.columns
+        else:
+            columns_name = ["Shap%d" % (i + 1) for i in range(X.shape[1])]
 
-            shap_values = self.explainer(X)
-            # Name columns
-            if isinstance(X, pd.DataFrame):
-                columns_name = X.columns
-            else:
-                columns_name = ["Shap%d" % (i + 1) for i in range(X.shape[1])]
-
-            exp = pd.DataFrame(
-                data=shap_values.values,
-                columns=columns_name,
-            )
-        if self.space == "input":
-            shap_values = X
-            # Name columns
-            if isinstance(X, pd.DataFrame):
-                exp = X
-            else:
-                columns_name = ["Shap%d" % (i + 1) for i in range(X.shape[1])]
-
-                exp = pd.DataFrame(
-                    data=shap_values,
-                    columns=columns_name,
-                )
-        if self.space == "prediction":
-            try:
-                shap_values = self.model.predict_proba(X)[:, 1]
-            except:
-                shap_values = self.model.predict(X)
-
-            # Name columns
-            exp = pd.DataFrame(
-                data=shap_values,
-                columns=["preds"],
-            )
+        exp = pd.DataFrame(
+            data=shap_values.values,
+            columns=columns_name,
+        )
 
         return exp
-
-    def get_auc_val(self):
-        """
-        Returns the AUC of the explanation shift detector on the validation set of the explanation space
-        Example
-        -------
-        from sklearn.model_selection import train_test_split
-        from sklearn.datasets import make_blobs
-        from tools.xaiUtils import ExplanationShiftDetector
-        from xgboost import XGBRegressor
-        from sklearn.linear_model import LogisticRegression
-
-        # Create data
-        X, y = make_blobs(n_samples=2000, centers=2, n_features=5, random_state=0)
-        X_tr, X_te, y_tr, y_te = train_test_split(X, y, test_size=0.5, random_state=0)
-        X_ood,y_ood = make_blobs(n_samples=1000, centers=1, n_features=5, random_state=0)
-
-        detector = ExplanationShiftDetector(model=XGBRegressor(),gmodel=LogisticRegression())
-        detector.fit(X_tr, y_tr, X_ood)
-        detector.get_auc_val()
-        # 0.76
-
-        """
-        return roc_auc_score(
-            self.y_shap_te, self.explanation_predict_proba(self.X_shap_te)[:, 1]
-        )
-
-    def get_coefs(self):
-        if self.gmodel.__class__.__name__ == "Pipeline":
-            if "sklearn.linear_model" in self.gmodel.steps[-1][1].__module__:
-                return self.gmodel.steps[-1][1].coef_
-            else:
-                raise ValueError(
-                    "Coefficients can not be calculated. Supported models are linear: sklearn.linear_model, got {}".format(
-                        self.gmodel.steps[-1][1].__module__
-                    )
-                )
-        else:
-            return self.get_linear_coefs()
-
-    def get_linear_coefs(self):
-        if "sklearn.linear_model" in self.gmodel.__module__:
-            return self.gmodel.coef_
-        else:
-            raise ValueError(
-                "Coefficients can not be calculated. Supported models are linear: sklearn.linear_model, got {}".format(
-                    self.gmodel.steps[-1][1].__module__
-                )
-            )
-
-    def explain_detector(self):
-        if self.space == "prediction":
-            return
-        exp = shap.Explainer(self.model)
-
-        shap_values = exp.shap_values(self.S_ood.drop(columns="label"))
-        shap.summary_plot(
-            shap_values, self.S_ood.drop(columns="label"), plot_type="bar", show=False
-        )
