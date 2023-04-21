@@ -15,10 +15,10 @@
         :target: https://pepy.tech/project/skshift
 
 
-Welcome to skshift's documentation!
+skshift!
 ===================================
 
-Sk-shift is a Python library designed to detect distribution shift that can affect the behavior of machine learning models.
+Sk-shift (scikit-shift) is a Python library designed to detect distribution shift that can affect the behavior of machine learning models.
 
 .. note::
 
