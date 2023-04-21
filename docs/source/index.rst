@@ -18,11 +18,29 @@
 Welcome to skshift's documentation!
 ===================================
 
-sk-shift is a Python library for detecting distribution shift that impacts the model
+Sk-shift is a Python library designed to detect distribution shift that can affect the behavior of machine learning models.
 
 .. note::
 
    This project is under active development.
+
+This Python library designed to help users detect distribution shifts that can impact the behavior of machine learning models on new data. 
+ 
+Traditional methods for detecting shifts in input or output data distributions
+may have limitations in identifying changes in the model's behavior. 
+That's why skshift proposes measures of "explanation shifts" as a key indicator to investigate the interaction between
+distribution shifts and learned models.
+
+At its core, skshift defines explanation shift as the statistical comparison between how predictions
+from training data are explained and how predictions on new data are explained.
+By introducing an Explanation Shift Detector that operates on the explanation space,
+skshift provides more sensitive and explainable changes in interactions between distribution shifts and learned models.
+Compared to other methods that are based on different kinds of distribution shifts, monitoring for explanation shifts results in better indicators for varying model behavior.
+
+Our approach is backed by both theoretical and experimental evidence,
+demonstrating the effectiveness of skshift on synthetic and real data.
+
+
 
 Installation
 ------------
@@ -36,7 +54,7 @@ To install skshift, run this command in your terminal:
 
 Usage: Explanation Shift
 -------------------------
-Let's load some libraries
+To begin detecting shifts in data distributions using skshift, first import the necessary libraries.
 
 .. code:: python
 
@@ -115,8 +133,16 @@ Tutorial
    explanationTutorial
 
 
+
 Indices and tables
 ==================
 * :ref:`genindex`
 * :ref:`modindex`
 * :ref:`search`
+
+.. toctree::
+   :maxdepth: 3
+   :hidden:
+   :caption: API
+
+   api
