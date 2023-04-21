@@ -146,7 +146,9 @@ The AUC is high which means that the model is changing. We can now proceed to in
     # Global Explanations
     fig = shap.plots.bar(shap_values)
 
- We proceed to the explanations of the *Explanation Shift Detector*
+
+We proceed to the explanations of the *Explanation Shift Detector*
+
 
 .. image:: images/folksShapLocal.png
   :width: 400
