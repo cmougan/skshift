@@ -110,6 +110,7 @@ If the AUC is above 0.5 then we can expect and change on the model predictions.
 .. code:: python
 
     # Option 2: fit the whole pipeline of model and detector at once
+    detector = ExplanationShiftDetector(model=XGBClassifier(), gmodel=LogisticRegression())
     detector.fit_pipeline(X_tr, y_tr, X_te, X_ood)
 
     roc_auc_score(y_new, detector.predict_proba(X_new)[:, 1])

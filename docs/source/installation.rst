@@ -14,7 +14,7 @@ To install sktools, run this command in your terminal:
 
     $ pip install skshift
 
-This is the preferred method to install nobias, as it will always install the most recent stable release.
+This is the preferred method to install ****, as it will always install the most recent stable release.
 
 If you don't have `pip`_ installed, this `Python installation guide`_ can guide
 you through the process.
@@ -32,7 +32,7 @@ You can either clone the public repository:
 
 .. code-block:: console
 
-    $ git clone https://github.com/cmougan/skshift
+    $ git clone https://github.com/c****/skshift
 
 Once you have a copy of the source, you can install it with:
 
@@ -41,4 +41,4 @@ Once you have a copy of the source, you can install it with:
     $ python setup.py install
 
 
-.. _Github repo: https://github.com/cmougan/skshift
+.. _Github repo: https://github.com/c****/skshift

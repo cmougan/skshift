@@ -27,7 +27,8 @@ Importing libraries
     from sklearn.datasets import make_blobs
     from xgboost import XGBRegressor
     from sklearn.linear_model import LogisticRegression
-    from sksfhift import ExplanationShiftDetector
+    from skshift import ExplanationShiftDetector
+    from sklearn.model_selection import train_test_split
 
 
 Generate synthetic ID and OOD data.

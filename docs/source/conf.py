@@ -6,8 +6,8 @@ import sphinx_rtd_theme
 import skshift
 
 project = "skshift"
-copyright = "2022, Mougan"
-author = "Carlos Mougan"
+copyright = "2022, ****"
+author = "**** ****"
 
 release = "0.1"
 version = "0.1.2"
