@@ -6,11 +6,12 @@ import sphinx_rtd_theme
 import skshift
 
 project = "skshift"
-copyright = "2022, ****"
-author = "**** ****"
+copyright = "2023, Mougan"
+author = "Carlos Mougan"
+author_email='carmougan@gmail.com',
 
-release = "0.1"
-version = "0.1.2"
+release = "0.2"
+version = "0.1.5"
 
 # -- General configuration
 

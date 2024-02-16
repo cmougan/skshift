@@ -3,9 +3,9 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 [project]
 name = "skshift"
-version = "0.01.4"
+version = "0.1.5"
 authors = [
-  { name="**** ****", email="********@****.com" },
+  { name="Carlos Mougan", email="carmougan@gmail.com" },
 ]
 description = "Explanation Shift"
 readme = "README.md"
@@ -18,5 +18,5 @@ classifiers = [
 ]
 
 [project.urls]
-"Homepage" = "https://github.com/c****/skshift"
-"Bug Tracker" = "https://github.com/c****/skshift/issues"
+"Homepage" = "https://github.com/cmougan/skshift"
+"Bug Tracker" = "https://github.com/cmougan/skshift/issues"
